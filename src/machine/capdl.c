@@ -132,7 +132,7 @@ void obj_sc_print_attrs(cap_t sc_cap)
 void obj_ut_print_attrs(cte_t *slot, tcb_t *tcb)
 {
     /* might have two untypeds with the same address but different size */
-    printf("%p_%lu_untyped = ut (%lu bits, paddr: %p) {",
+    printf("untyped_%p_%lu_untyped = ut (%lu bits, paddr: %p) {",
            (void *)cap_untyped_cap_get_capPtr(slot->cap),
            (long unsigned int)cap_untyped_cap_get_capBlockSize(slot->cap),
            (long unsigned int)cap_untyped_cap_get_capBlockSize(slot->cap),
@@ -168,8 +168,10 @@ void obj_tcb_print_cnodes(cap_t cnode, tcb_t *tcb)
         return;
     }
     add_to_seen(cnode);
-    printf("%p_cnode = cnode ", (void *)cap_cnode_cap_get_capCNodePtr(cnode));
+
+    printf("cnode_%p_cnode = cnode ", (void *)cap_cnode_cap_get_capCNodePtr(cnode));
     obj_cnode_print_attrs(cnode);
+
     word_t radix = cap_cnode_cap_get_capCNodeRadix(cnode);
 
     for (uint32_t i = 0; i < (1 << radix); i++) {
@@ -224,18 +226,18 @@ void cap_ntfn_print_attrs(cap_t ntfn)
 
 void obj_tcb_print_slots(tcb_t *tcb)
 {
-    printf("%p_tcb {\n", tcb);
+    printf("tcb_%p_tcb {\n", tcb);
 
     /* CSpace root */
     if (cap_get_capType(TCB_PTR_CTE_PTR(tcb, tcbCTable)->cap) != cap_null_cap) {
-        printf("cspace: %p_cnode ",
+        printf("cspace: cnode_%p_cnode ",
                (void *)cap_cnode_cap_get_capCNodePtr(TCB_PTR_CTE_PTR(tcb, tcbCTable)->cap));
         cap_cnode_print_attrs(TCB_PTR_CTE_PTR(tcb, tcbCTable)->cap);
     }
 
     /* VSpace root */
     if (cap_get_capType(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap) != cap_null_cap) {
-        printf("vspace: %p_pd\n",
+        printf("vspace: pd_%p_pd\n",
                cap_vtable_cap_get_vspace_root_fp(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap));
 
     }
@@ -250,19 +252,19 @@ void obj_tcb_print_slots(tcb_t *tcb)
 
     /* Fault endpoint slot */
     if (cap_get_capType(TCB_PTR_CTE_PTR(tcb, tcbFaultHandler)->cap) != cap_null_cap) {
-        printf("fault_ep_slot: %p_ep ",
+        printf("fault_ep_slot: ep_%p_ep ",
                (void *)cap_endpoint_cap_get_capEPPtr(TCB_PTR_CTE_PTR(tcb, tcbFaultHandler)->cap));
         cap_ep_print_attrs(TCB_PTR_CTE_PTR(tcb, tcbFaultHandler)->cap);
     }
 
     /* sc */
     if (tcb->tcbSchedContext) {
-        printf("sc_slot: %p_sc\n", tcb->tcbSchedContext);
+        printf("sc_slot: sc_%p_sc\n", tcb->tcbSchedContext);
     }
 
     /* Timeout endpoint slot */
     if (cap_get_capType(TCB_PTR_CTE_PTR(tcb, tcbTimeoutHandler)->cap) != cap_null_cap) {
-        printf("temp_fault_ep_slot: %p_ep ",
+        printf("temp_fault_ep_slot: ep_%p_ep ",
                (void *)cap_endpoint_cap_get_capEPPtr(TCB_PTR_CTE_PTR(tcb, tcbTimeoutHandler)->cap));
         cap_ep_print_attrs(TCB_PTR_CTE_PTR(tcb, tcbTimeoutHandler)->cap);
     }
@@ -297,7 +299,7 @@ void obj_cnode_print_slots(tcb_t *tcb)
     }
     add_to_seen(root);
 
-    printf("%p_cnode {\n", (void *)cap_cnode_cap_get_capCNodePtr(root));
+    printf("cnode_%p_cnode {\n", (void *)cap_cnode_cap_get_capCNodePtr(root));
 
     for (uint32_t i = 0; i < (1 << radix); i++) {
         lookupCapAndSlot_ret_t c = lookupCapAndSlot(tcb, i);
@@ -346,7 +348,7 @@ void obj_irq_print_slots(cap_t irq_cap)
 {
     irq_t irq = IDX_TO_IRQT(cap_irq_handler_cap_get_capIRQ(irq_cap));
     if (isIRQActive(irq)) {
-        printf("0x%lx_%lu_irq {\n",
+        printf("irq_0x%lx_%lu_irq {\n",
 #if defined(ENABLE_SMP_SUPPORT) && defined(CONFIG_ARCH_ARM)
                (long unsigned int)irq.irq,
 #else
@@ -368,20 +370,21 @@ void print_objects(void)
         if (root_or_idle_tcb(curr)) {
             continue;
         }
-        /* print the contains of the tcb's vtable as objects */
+        /* print the contents of the tcb's vtable as objects */
         obj_tcb_print_vtable(curr);
     }
+
+//IK why two loops? why not do it in one loop?
 
     for (tcb_t *curr = NODE_STATE(ksDebugTCBs); curr != NULL; curr = TCB_PTR_DEBUG_PTR(curr)->tcbDebugNext) {
         if (root_or_idle_tcb(curr)) {
             continue;
         }
-
-        /* print the tcb as objects */
-        printf("%p_tcb = tcb ", curr);
+        /* print the tcb as object */
+        printf("tcb_%p_tcb = tcb ", curr);
         obj_tcb_print_attrs(curr);
 
-        /* print the contains of the tcb's ctable as objects */
+        /* print the contents of the tcb's ctable as objects */
         if (cap_get_capType(TCB_PTR_CTE_PTR(curr, tcbCTable)->cap) == cap_cnode_cap) {
             obj_tcb_print_cnodes(TCB_PTR_CTE_PTR(curr, tcbCTable)->cap, curr);
         }
@@ -404,46 +407,47 @@ void print_cap(cap_t cap)
 {
     switch (cap_get_capType(cap)) {
     case cap_endpoint_cap: {
-        printf("%p_ep ",
+        printf("ep_%p_ep ",
                (void *)cap_endpoint_cap_get_capEPPtr(cap));
         cap_ep_print_attrs(cap);
         break;
     }
     case cap_notification_cap: {
-        printf("%p_notification ",
+        printf("notification_%p_notification ",
                (void *)cap_notification_cap_get_capNtfnPtr(cap));
         cap_ntfn_print_attrs(cap);
         break;
     }
     case cap_untyped_cap: {
-        printf("%p_untyped\n",
+        printf("untyped_%p_untyped\n",
                (void *)cap_untyped_cap_get_capPtr(cap));
         break;
     }
     case cap_thread_cap: {
-        printf("%p_tcb\n",
+        printf("tcb_%p_tcb\n",
                (void *)cap_thread_cap_get_capTCBPtr(cap));
         break;
     }
     case cap_cnode_cap: {
-        printf("%p_cnode ",
+        printf("cnode_%p_cnode ",
                (void *)cap_cnode_cap_get_capCNodePtr(cap));
         cap_cnode_print_attrs(cap);
         break;
     }
 #ifdef CONFIG_KERNEL_MCS
     case cap_reply_cap: {
-        printf("%p_reply\n",
+        //IK why is this only in MCS?
+        printf("reply_%p_reply\n",
                (void *)cap_reply_cap_get_capReplyPtr(cap));
         break;
     }
     case cap_sched_context_cap: {
-        printf("%p_sc\n",
+        printf("sc_%p_sc\n",
                (void *)cap_sched_context_cap_get_capSCPtr(cap));
         break;
     }
     case cap_sched_control_cap: {
-        printf("%lu_sched_control\n",
+        printf("sched_control_%lu_sched_control\n",
                (long unsigned int)cap_sched_control_cap_get_core(cap));
         break;
     }
@@ -453,7 +457,7 @@ void print_cap(cap_t cap)
         break;
     }
     case cap_irq_handler_cap: {
-        printf("%p_%lu_irq\n",
+        printf("irq_%p_%lu_irq\n",
                (void *)cap_irq_handler_cap_get_capIRQ(cap),
                (long unsigned int)IRQT_TO_CORE(IDX_TO_IRQT(cap_irq_handler_cap_get_capIRQ(cap))));
         break;
@@ -469,17 +473,17 @@ void print_object(cap_t cap)
 {
     switch (cap_get_capType(cap)) {
     case cap_endpoint_cap: {
-        printf("%p_ep = ep\n",
+        printf("ep_%p_ep = ep\n",
                (void *)cap_endpoint_cap_get_capEPPtr(cap));
         break;
     }
     case cap_notification_cap: {
-        printf("%p_notification = notification\n",
+        printf("notification_%p_notification = notification\n",
                (void *)cap_notification_cap_get_capNtfnPtr(cap));
         break;
     }
     case cap_thread_cap: {
-        /* this object has already got handle by `print_objects` */
+        /* this object has already been handled by `print_objects` */
         break;
     }
     case cap_cnode_cap: {
@@ -487,19 +491,19 @@ void print_object(cap_t cap)
     }
 #ifdef CONFIG_KERNEL_MCS
     case cap_reply_cap: {
-        printf("%p_reply = rtreply\n",
+        printf("reply_%p_reply = rtreply\n",
                (void *)cap_reply_cap_get_capReplyPtr(cap));
         break;
     }
     case cap_sched_context_cap: {
-        printf("%p_sc = sc ",
+        printf("sc_%p_sc = sc ",
                (void *)cap_sched_context_cap_get_capSCPtr(cap));
         obj_sc_print_attrs(cap);
         break;
     }
 #endif
     case cap_irq_handler_cap: {
-        printf("%p_%lu_irq = irq\n",
+        printf("irq_%p_%lu_irq = irq\n",
                (void *)cap_irq_handler_cap_get_capIRQ(cap),
                (long unsigned int)IRQT_TO_CORE(IDX_TO_IRQT(cap_irq_handler_cap_get_capIRQ(cap))));
         break;
