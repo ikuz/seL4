@@ -44,16 +44,11 @@ void reset_seen_list(void)
 bool_t seen(cap_t c)
 {
     for (int i = 0; i < watermark; i++) {
-        if (same_cap(seen_list[i], c)) {
+        if (sameObjectAs(seen_list[i], c)) {
             return true;
         }
     }
     return false;
-}
-
-bool_t same_cap(cap_t a, cap_t b)
-{
-    return (a.words[0] == b.words[0] && a.words[1] == b.words[1]);
 }
 
 /* Return true if strings are the same */
