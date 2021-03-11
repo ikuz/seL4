@@ -85,7 +85,7 @@ void obj_tcb_print_attrs(tcb_t *tcb)
     printf(", affinity: %lu", (long unsigned int)tcb->tcbAffinity);
 #endif /* ENABLE_SMP_SUPPORT */
 
-    /* init */
+    /* TBD: what about init? */
 
 #ifdef CONFIG_KERNEL_MCS
     cap_t ep_cap = TCB_PTR_CTE_PTR(tcb, tcbFaultHandler)->cap;
@@ -276,14 +276,25 @@ void obj_tcb_print_slots(tcb_t *tcb)
 # else
     /* Reply cap slot */
     if (cap_get_capType(TCB_PTR_CTE_PTR(tcb, tcbReply)->cap) != cap_null_cap) {
-        printf("reply_slot: %p_reply\n",
-               (void *)cap_reply_cap_get_capTCBPtr(TCB_PTR_CTE_PTR(tcb, tcbReply)->cap));
+// TBD: capdl tool doesn't know reply_slot
+//       printf("reply_slot: reply_%p_reply\n",
+//               (void *)cap_reply_cap_get_capTCBPtr(TCB_PTR_CTE_PTR(tcb, tcbReply)->cap));
     }
 
-    /* TCB of most recent IPC sender */
+
+    /* Most recent IPC sender */
     if (cap_get_capType(TCB_PTR_CTE_PTR(tcb, tcbCaller)->cap) != cap_null_cap) {
-        tcb_t *caller = TCB_PTR(cap_thread_cap_get_capTCBPtr(TCB_PTR_CTE_PTR(tcb, tcbCaller)->cap));
-        printf("caller_slot: %p_tcb\n", caller);
+        /* TBD: is this always a reply cap? or a TCB cap? */
+        // TBD: capdl tool doesn't know caller_slot
+        /*
+        if (cap_get_capType(TCB_PTR_CTE_PTR(tcb, tcbCaller)->cap) == cap_reply_cap) {
+           printf("caller_slot: reply_%p_reply\n",
+                   (void *)cap_reply_cap_get_capTCBPtr(TCB_PTR_CTE_PTR(tcb, tcbCaller)->cap));
+        } else if (cap_get_capType(TCB_PTR_CTE_PTR(tcb, tcbCaller)->cap) == cap_thread_cap) {
+            tcb_t *caller = TCB_PTR(cap_thread_cap_get_capTCBPtr(TCB_PTR_CTE_PTR(tcb, tcbCaller)->cap));
+            printf("caller_slot: tcb_%p_tcb\n", caller);
+        }
+        */
     }
 #endif /* CONFIG_KERNEL_MCS */
     printf("}\n");
@@ -311,6 +322,7 @@ void obj_cnode_print_slots(tcb_t *tcb)
             printf("0x%x: ", i);
             print_cap(c.cap);
         }
+        /* TBD: do all nested cnodes */
     }
     printf("}\n");
 
