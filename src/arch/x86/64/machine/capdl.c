@@ -324,7 +324,7 @@ void print_cap_arch(cap_t cap)
         printf("vcpu_%p_vcpu\n", (void *)cap_vcpu_cap_get_capVCPUPtr(cap));
         break;
     }
-#endif
+#endif /* CONFIG_VTX */
     /* X86 specific caps */
     case cap_io_port_cap: {
         printf("io_port_%p%p_io_port\n", (void *)cap_io_port_cap_get_capIOPortFirstPort(cap),
@@ -340,7 +340,7 @@ void print_cap_arch(cap_t cap)
         printf("iopt_%p_iopt\n", (void *)cap_io_page_table_cap_get_capIOPTBasePtr(cap));
         break;
     }
-#endif
+#endif /* CONFIG_VTX */
     default: {
         printf("[unknown cap %lu]\n", (long unsigned int)cap_get_capType(cap));
         break;
@@ -377,7 +377,7 @@ void print_object_arch(cap_t cap)
         printf("vcpu_%p_vcpu = vcpu\n", (void *)cap_vcpu_cap_get_capVCPUPtr(cap));
         break;
     }
-#endif
+#endif /* CONFIG_VTX */
     /* X86 specific caps */
     case cap_io_port_cap: {
         printf("io_port_%p%p_io_port = io_port ",
@@ -397,7 +397,7 @@ void print_object_arch(cap_t cap)
         x86_obj_iopt_print_attrs(cap);
         break;
     }
-#endif
+#endif /* CONFIG_VTX */
     default: {
         printf("[unknown object %lu]\n", (long unsigned int)cap_get_capType(cap));
         break;
