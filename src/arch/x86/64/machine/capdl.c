@@ -99,7 +99,7 @@ static void obj_frame_print_attrs(paddr_t paddr, word_t page_size)
 static void x86_64_obj_pt_print_slots(pde_t *pdSlot)
 {
     paddr_t paddr;
-    word_t page_size;
+    word_t page_size, frame_rw;
     pte_t *pt = paddr_to_pptr(pde_pde_pt_ptr_get_pt_base_address(pdSlot));
 
     for (word_t i = 0; i < BIT(PT_INDEX_OFFSET + PT_INDEX_BITS); i += (1UL << PT_INDEX_OFFSET)) {
@@ -107,9 +107,16 @@ static void x86_64_obj_pt_print_slots(pde_t *pdSlot)
 
         if (pte_ptr_get_present(ptSlot)) {
             paddr = pte_ptr_get_page_base_address(ptSlot);
-            page_size = seL4_PageBits;
-            printf("frame_%p_%04lu = frame ", ptSlot, GET_PT_INDEX(i));
-            obj_frame_print_attrs(paddr, page_size);
+            page_size = X86_SmallPage;
+            frame_rw = pte_ptr_get_read_write(ptSlot);
+
+            cap_t c = cap_frame_cap_new(asidInvalid, (uint64_t) paddr, page_size, X86_MappingNone, 0/*capFMappedAddress*/, frame_rw,
+                                        0/*capFIsDevice*/);
+            if (!seen(c)) {
+                add_to_seen(c);
+                printf("frame_%p_%04lu = frame ", ptSlot, GET_PT_INDEX(i));
+                obj_frame_print_attrs(paddr, pageBitsForSize(page_size));
+            }
         }
     }
 }
@@ -117,7 +124,7 @@ static void x86_64_obj_pt_print_slots(pde_t *pdSlot)
 static void x86_64_obj_pd_print_slots(pdpte_t *pdptSlot)
 {
     paddr_t paddr;
-    word_t page_size;
+    word_t page_size, frame_rw;
     pde_t *pd = paddr_to_pptr(pdpte_pdpte_pd_ptr_get_pd_base_address(pdptSlot));
 
     for (word_t i = 0; i < BIT(PD_INDEX_OFFSET + PD_INDEX_BITS); i += (1UL << PD_INDEX_OFFSET)) {
@@ -125,14 +132,25 @@ static void x86_64_obj_pd_print_slots(pdpte_t *pdptSlot)
 
         if ((pde_ptr_get_page_size(pdSlot) == pde_pde_large) && pde_pde_large_ptr_get_present(pdSlot)) {
             paddr = pde_pde_large_ptr_get_page_base_address(pdSlot);
-            page_size = seL4_LargePageBits;
+            page_size = X86_LargePage;
+            frame_rw = pde_pde_large_ptr_get_read_write(pdSlot);
 
-            printf("frame_%p_%04lu = frame ", pdSlot, GET_PD_INDEX(i));
-            obj_frame_print_attrs(paddr, page_size);
+            //TBD: how to determine if it is device memory?
+            cap_t c = cap_frame_cap_new(asidInvalid, (uint64_t) paddr, page_size, X86_MappingNone, 0/*capFMappedAddress*/, frame_rw,
+                                        0/*capFIsDevice*/);
+            if (!seen(c)) {
+                add_to_seen(c);
+                printf("frame_%p_%04lu = frame ", pdSlot, GET_PD_INDEX(i));
+                obj_frame_print_attrs(paddr, pageBitsForSize(page_size));
+            }
 
         } else if (pde_pde_pt_ptr_get_present(pdSlot)) {
-            printf("pt_%p_%04lu = pt\n", pdSlot, GET_PD_INDEX(i));
-            x86_64_obj_pt_print_slots(pdSlot);
+            cap_t c = cap_page_table_cap_new(asidInvalid, (uint64_t) pdSlot, 0, 0);
+            if (!seen(c)) {
+                add_to_seen(c);
+                printf("pt_%p_%04lu = pt\n", pdSlot, GET_PD_INDEX(i));
+                x86_64_obj_pt_print_slots(pdSlot);
+            }
         }
     }
 }
@@ -140,7 +158,7 @@ static void x86_64_obj_pd_print_slots(pdpte_t *pdptSlot)
 static void x86_64_obj_pdpt_print_slots(pml4e_t *pml4Slot)
 {
     paddr_t paddr;
-    word_t page_size;
+    word_t page_size, frame_rw;
     pdpte_t *pdpt = paddr_to_pptr(pml4e_ptr_get_pdpt_base_address(pml4Slot));
 
     for (word_t i = 0; i < BIT(PDPT_INDEX_OFFSET + PDPT_INDEX_BITS); i += (1UL << PDPT_INDEX_OFFSET)) {
@@ -149,14 +167,25 @@ static void x86_64_obj_pdpt_print_slots(pml4e_t *pml4Slot)
         if (pdpte_ptr_get_page_size(pdptSlot) == pdpte_pdpte_1g &&
             pdpte_pdpte_1g_ptr_get_present(pdptSlot)) {
             paddr = pdpte_pdpte_1g_ptr_get_page_base_address(pdptSlot);
-            page_size = seL4_HugePageBits;
+            page_size = X64_HugePage;
+            frame_rw = pdpte_pdpte_1g_ptr_get_read_write(pdptSlot);
 
-            printf("frame_%p_%04lu = frame ", pdptSlot, GET_PDPT_INDEX(i));
-            obj_frame_print_attrs(paddr, page_size);
+            //TBD: how to determine if it is device memory?
+            cap_t c = cap_frame_cap_new(asidInvalid, (uint64_t) paddr, page_size, X86_MappingNone, 0/*capFMappedAddress*/, frame_rw,
+                                        0/*capFIsDevice*/);
+            if (!seen(c)) {
+                add_to_seen(c);
+                printf("frame_%p_%04lu = frame ", pdptSlot, GET_PDPT_INDEX(i));
+                obj_frame_print_attrs(paddr, pageBitsForSize(page_size));
+            }
 
         } else if (pdpte_pdpte_pd_ptr_get_present(pdptSlot)) {
-            printf("pd_%p_%04lu = pd\n", pdptSlot, GET_PDPT_INDEX(i));
-            x86_64_obj_pd_print_slots(pdptSlot);
+            cap_t c = cap_page_directory_cap_new(asidInvalid, (uint64_t) pdptSlot, 0, 0);
+            if (!seen(c)) {
+                add_to_seen(c);
+                printf("pd_%p_%04lu = pd\n", pdptSlot, GET_PDPT_INDEX(i));
+                x86_64_obj_pd_print_slots(pdptSlot);
+            }
         }
     }
 }
@@ -166,8 +195,12 @@ static void x86_64_obj_pml4_print_slots(pml4e_t *pml4)
     for (word_t i = 0; i < BIT(PML4_INDEX_OFFSET + PML4_INDEX_BITS); i += (1UL << PML4_INDEX_OFFSET)) {
         pml4e_t *pml4Slot = lookupPML4Slot(pml4, i);
         if (pml4e_ptr_get_present(pml4Slot)) {
-            printf("pdpt_%p_%04lu = pdpt\n", pml4Slot, GET_PML4_INDEX(i));
-            x86_64_obj_pdpt_print_slots(pml4Slot);
+            cap_t c = cap_pdpt_cap_new(asidInvalid, (uint64_t) pml4Slot, 0, 0);
+            if (!seen(c)) {
+                add_to_seen(c);
+                printf("pdpt_%p_%04lu = pdpt\n", pml4Slot, GET_PML4_INDEX(i));
+                x86_64_obj_pdpt_print_slots(pml4Slot);
+            }
         }
     }
 }
@@ -175,10 +208,11 @@ static void x86_64_obj_pml4_print_slots(pml4e_t *pml4)
 void obj_tcb_print_vtable(tcb_t *tcb)
 {
     /* levels: PML4 -> PDPT -> PD -> PT */
-    if (isValidVTableRoot(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap) && !seen(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap)) {
-        pml4e_t *pml4 = PML4E_PTR(cap_pml4_cap_get_capPML4BasePtr(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap));
-        add_to_seen(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap);
-        printf("%p_pd = pml4\n", pml4);
+    cap_t cap = TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap;
+    if (isValidVTableRoot(cap) && !seen(cap)) {
+        pml4e_t *pml4 = PML4E_PTR(cap_pml4_cap_get_capPML4BasePtr(cap));
+        add_to_seen(cap);
+        printf("pd_%p_pd = pml4\n", pml4);
         x86_64_obj_pml4_print_slots(pml4);
     }
 }
@@ -415,7 +449,11 @@ static void x86_64_cap_pd_print_slots(pdpte_t *pdptSlot, vptr_t vptr)
     for (word_t i = 0; i < BIT(PD_INDEX_OFFSET + PD_INDEX_BITS); i += (1UL << PD_INDEX_OFFSET)) {
         pde_t *pdSlot = pd + GET_PD_INDEX(i);
         if ((pde_ptr_get_page_size(pdSlot) == pde_pde_pt) && pde_pde_pt_ptr_get_present(pdSlot)) {
-            x86_64_cap_pt_print_slots(pdSlot, i);
+            cap_t c = cap_page_table_cap_new(asidInvalid, (uint64_t) pdSlot, 0, 0);
+            if (!seen(c)) {
+                add_to_seen(c);
+                x86_64_cap_pt_print_slots(pdSlot, i);
+            }
         }
     }
 }
@@ -443,7 +481,11 @@ static void x86_64_cap_pdpt_print_slots(pml4e_t *pml4Slot, vptr_t vptr)
         pdpte_t *pdptSlot = pdpt + GET_PDPT_INDEX(i);
 
         if (pdpte_ptr_get_page_size(pdptSlot) == pdpte_pdpte_pd && pdpte_pdpte_pd_ptr_get_present(pdptSlot)) {
-            x86_64_cap_pd_print_slots(pdptSlot, i);
+            cap_t c = cap_page_directory_cap_new(asidInvalid, (uint64_t) pdptSlot, 0, 0);
+            if (!seen(c)) {
+                add_to_seen(c);
+                x86_64_cap_pd_print_slots(pdptSlot, i);
+            }
         }
     }
 }
@@ -462,7 +504,11 @@ static void x86_64_cap_pml4_print_slots(pml4e_t *pml4)
     for (word_t i = 0; i < BIT(PML4_INDEX_OFFSET + PML4_INDEX_BITS); i += (1UL << PML4_INDEX_OFFSET)) {
         pml4e_t *pml4Slot = lookupPML4Slot(pml4, i);
         if (pml4e_ptr_get_present(pml4Slot)) {
-            x86_64_cap_pdpt_print_slots(pml4Slot, i);
+            cap_t c = cap_pdpt_cap_new(asidInvalid, (uint64_t) pml4Slot, 0, 0);
+            if (!seen(c)) {
+                add_to_seen(c);
+                x86_64_cap_pdpt_print_slots(pml4Slot, i);
+            }
         }
     }
 }
@@ -470,9 +516,10 @@ static void x86_64_cap_pml4_print_slots(pml4e_t *pml4)
 void obj_vtable_print_slots(tcb_t *tcb)
 {
     /* levels: PML4 -> PDPT -> PD -> PT */
-    if (isValidVTableRoot(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap) && !seen(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap)) {
-        pml4e_t *pml4 = PML4E_PTR(cap_pml4_cap_get_capPML4BasePtr(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap));
-        add_to_seen(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap);
+    cap_t cap = TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap;
+    if (isValidVTableRoot(cap) && !seen(cap)) {
+        add_to_seen(cap);
+        pml4e_t *pml4 = PML4E_PTR(cap_pml4_cap_get_capPML4BasePtr(cap));
         x86_64_cap_pml4_print_slots(pml4);
     }
 }
