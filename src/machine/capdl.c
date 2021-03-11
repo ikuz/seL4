@@ -92,7 +92,7 @@ void obj_tcb_print_attrs(tcb_t *tcb)
     if (cap_get_capType(ep_cap) != cap_null_cap) {
         printf(", fault_ep: %p", EP_PTR(cap_endpoint_cap_get_capEPPtr(ep_cap)));
     }
-#endif
+#endif /* CONFIG_KERNEL_MCS */
 
     printf(", dom: %ld)\n", tcb->tcbDomain);
 }
@@ -455,7 +455,7 @@ void print_cap(cap_t cap)
                (long unsigned int)cap_sched_control_cap_get_core(cap));
         break;
     }
-#endif
+#endif /* CONFIG_KERNEL_MCS */
     case cap_irq_control_cap: {
         printf("irq_control\n"); /* only one in the system */
         break;
@@ -505,7 +505,7 @@ void print_object(cap_t cap)
         obj_sc_print_attrs(cap);
         break;
     }
-#endif
+#endif /* CONFIG_KERNEL_MCS */
     case cap_irq_handler_cap: {
         printf("irq_%p_%lu_irq = irq\n",
                (void *)cap_irq_handler_cap_get_capIRQ(cap),
