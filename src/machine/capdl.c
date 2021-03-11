@@ -17,12 +17,10 @@
 #include <kernel/sporadic.h>
 #endif
 
-#define SEEN_SZ 256
+/* TBD: this is probably not big enough.  How much to allocate? can it be dynamic? */
+#define SEEN_SZ 2048
 
-/* seen list - check this array before we print cnode and vspace */
-/* TBD: This is to avoid traversing the same cnode. It should be applied to object
- * as well since the extractor might comes across multiple caps to the same object.
- */
+/* seen list - check this array before we print any objects */
 cap_t seen_list[SEEN_SZ];
 int watermark = 0;
 
@@ -175,7 +173,13 @@ void obj_tcb_print_cnodes(cap_t cnode, tcb_t *tcb)
     word_t radix = cap_cnode_cap_get_capCNodeRadix(cnode);
 
     for (uint32_t i = 0; i < (1 << radix); i++) {
+
         lookupCapAndSlot_ret_t c = lookupCapAndSlot(tcb, i);
+        if (seen(c.cap)) {
+            continue;
+        }
+        add_to_seen(c.cap);
+
         if (cap_get_capType(c.cap) == cap_untyped_cap) {
             /* we need `cte_t *` to print out the slots of an untyped object */
             obj_ut_print_attrs(c.slot, tcb);
