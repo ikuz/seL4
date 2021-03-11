@@ -93,7 +93,7 @@ static void obj_frame_print_attrs(paddr_t paddr, word_t page_size)
         break;
     }
 
-    printf(", paddr: 0x%p)\n", (void *)paddr);
+    printf(", paddr: %p)\n", (void *)paddr);
 }
 
 static void x86_64_obj_pt_print_slots(pde_t *pdSlot)
@@ -262,10 +262,10 @@ void print_cap_arch(cap_t cap)
         asid_t asid = cap_pml4_cap_get_capPML4MappedASID(cap);
         findVSpaceForASID_ret_t find_ret = findVSpaceForASID(asid);
         if (asid) {
-            printf("%p_pd (asid: %lu)\n",
+            printf("pd_%p_pd (asid: %lu)\n",
                    find_ret.vspace_root, (long unsigned int)asid);
         } else {
-            printf("%p_pd\n", find_ret.vspace_root);
+            printf("pd_%p_pd\n", find_ret.vspace_root);
         }
         break;
     }
@@ -282,28 +282,28 @@ void print_cap_arch(cap_t cap)
         break;
     }
     case cap_asid_pool_cap: {
-        printf("%p_asid_pool\n", (void *)cap_asid_pool_cap_get_capASIDPool(cap));
+        printf("asid_pool_%p_asid_pool\n", (void *)cap_asid_pool_cap_get_capASIDPool(cap));
         break;
     }
 #ifdef CONFIG_VTX
     case cap_vcpu_cap: {
-        printf("%p_vcpu\n", (void *)cap_vcpu_cap_get_capVCPUPtr(cap));
+        printf("vcpu_%p_vcpu\n", (void *)cap_vcpu_cap_get_capVCPUPtr(cap));
         break;
     }
 #endif
     /* X86 specific caps */
     case cap_io_port_cap: {
-        printf("%p%p_io_port\n", (void *)cap_io_port_cap_get_capIOPortFirstPort(cap),
+        printf("io_port_%p%p_io_port\n", (void *)cap_io_port_cap_get_capIOPortFirstPort(cap),
                (void *)cap_io_port_cap_get_capIOPortLastPort(cap));
         break;
     }
 #ifdef CONFIG_IOMMU
     case cap_io_space_cap: {
-        printf("%p_io_space\n", (void *)cap_io_space_cap_get_capPCIDevice(cap));
+        printf("io_space_%p_io_space\n", (void *)cap_io_space_cap_get_capPCIDevice(cap));
         break;
     }
     case cap_io_page_table_cap: {
-        printf("%p_iopt\n", (void *)cap_io_page_table_cap_get_capIOPTBasePtr(cap));
+        printf("iopt_%p_iopt\n", (void *)cap_io_page_table_cap_get_capIOPTBasePtr(cap));
         break;
     }
 #endif
@@ -333,20 +333,20 @@ void print_object_arch(cap_t cap)
         break;
 
     case cap_asid_pool_cap: {
-        printf("%p_asid_pool = asid_pool ",
+        printf("asid_pool_%p_asid_pool = asid_pool ",
                (void *)cap_asid_pool_cap_get_capASIDPool(cap));
         obj_asidpool_print_attrs(cap);
         break;
     }
 #ifdef CONFIG_VTX
     case cap_vcpu_cap: {
-        printf("%p_vcpu = vcpu\n", (void *)cap_vcpu_cap_get_capVCPUPtr(cap));
+        printf("vcpu_%p_vcpu = vcpu\n", (void *)cap_vcpu_cap_get_capVCPUPtr(cap));
         break;
     }
 #endif
     /* X86 specific caps */
     case cap_io_port_cap: {
-        printf("%p%p_io_port = io_port ",
+        printf("io_port_%p%p_io_port = io_port ",
                (void *)cap_io_port_cap_get_capIOPortFirstPort(cap),
                (void *)cap_io_port_cap_get_capIOPortLastPort(cap));
         x86_obj_ioports_print_attrs(cap);
@@ -354,12 +354,12 @@ void print_object_arch(cap_t cap)
     }
 #ifdef CONFIG_IOMMU
     case cap_io_space_cap: {
-        printf("%p_io_space = io_space ", (void *)cap_io_space_cap_get_capPCIDevice(cap));
+        printf("io_space_%p_io_space = io_space ", (void *)cap_io_space_cap_get_capPCIDevice(cap));
         x86_obj_iospace_print_attrs(cap);
         break;
     }
     case cap_io_page_table_cap: {
-        printf("%p_iopt = iopt ", (void *)cap_io_page_table_cap_get_capIOPTBasePtr(cap));
+        printf("iopt_%p_iopt = iopt ", (void *)cap_io_page_table_cap_get_capIOPTBasePtr(cap));
         x86_obj_iopt_print_attrs(cap);
         break;
     }
@@ -450,7 +450,7 @@ static void x86_64_cap_pdpt_print_slots(pml4e_t *pml4Slot, vptr_t vptr)
 
 static void x86_64_cap_pml4_print_slots(pml4e_t *pml4)
 {
-    printf("%p_pd {\n", pml4);
+    printf("pd_%p_pd {\n", pml4);
     for (word_t i = 0; i < BIT(PML4_INDEX_OFFSET + PML4_INDEX_BITS); i += (1UL << PML4_INDEX_OFFSET)) {
         pml4e_t *pml4Slot = lookupPML4Slot(pml4, i);
         if (pml4e_ptr_get_present(pml4Slot)) {
